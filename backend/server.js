@@ -8,8 +8,13 @@ import commentRoutes from "./routes/comments.js";
 import groupRoutes from "./routes/groups.js";
 import moderationRoutes from "./routes/moderation.js";
 import { authenticateToken } from "./middleware/auth.js";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import path from "path";
 
-
+// Add these lines near your other imports
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 dotenv.config();
 
 const app = express();
@@ -18,32 +23,33 @@ const PORT = process.env.PORT || 7001;
 app.use(express.json());
 app.use(cors());
 
-
-mongoose.connect(process.env.MONGO_URI).then((
-    console.log("Connected to MongoDB")
-)).catch((err) => {
-    console.log("MongoDB connection failed",err);
-})
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(console.log("Connected to MongoDB"))
+  .catch((err) => {
+    console.log("MongoDB connection failed", err);
+  });
 
 //Routing Part
 
-app.use('/api/auth',authRoutes);
-app.use('/api/posts', authenticateToken, postRoutes);
-app.use('/api/comments', authenticateToken, commentRoutes);
-app.use('/api/groups', authenticateToken, groupRoutes);
-app.use('/api/moderation', authenticateToken, moderationRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/posts", authenticateToken, postRoutes);
+app.use("/api/comments", authenticateToken, commentRoutes);
+app.use("/api/groups", authenticateToken, groupRoutes);
+app.use("/api/moderation", authenticateToken, moderationRoutes);
 
+//Server Static Production
 
-//Server Static Production 
+// if (process.env.NODE_ENV === "production") {
+//   app.use(express.static(path.join(__dirname, "../client/build")));
+//   app.get("*", (req, res) => {
+//     res.sendFile(path.resolve(__dirname, "../client/build", "index.html"));
+//   });
+// }
+app.get("/", (req, res) => {
+  res.send("API is running..."); // Simple message to check if the server is running
+});
 
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../client/build')));
-    app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
-    });
-  }
-
-app.listen(PORT,()=>{
- console.log(`Server is running on port ${PORT}`)
-
-})
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
