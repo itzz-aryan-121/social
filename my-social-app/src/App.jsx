@@ -9,6 +9,7 @@ import {
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 
 // Pages
@@ -21,95 +22,105 @@ import CreatePostPage from "./pages/CreatePostPage";
 import GroupPage from "./pages/GroupPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import ModeratorDashboard from "./pages/ModeratorDashboard";
+import CreateGroupPage from "./pages/CreateGroupPage";
 
 // Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Sidebar from "./components/Sidebar";
 
-// Contexts
-import { ThemeProvider } from "./contexts/ThemeContext";
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  return children;
+};
+
+const AppRoutes = () => {
+  const { user } = useAuth();
+  
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      
+      {/* Protected routes */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <HomePage />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile/:userId" element={
+        <ProtectedRoute>
+          <ProfilePage />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          {user && user._id ? (
+            <Navigate to={`/profile/${user._id}`} replace />
+          ) : (
+            <div>Loading...</div>
+          )}
+        </ProtectedRoute>
+      } />
+      <Route path="/groups" element={
+        <ProtectedRoute>
+          <GroupPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/groups/create" element={
+        <ProtectedRoute>
+          <CreateGroupPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/groups/:groupId" element={
+        <ProtectedRoute>
+          <GroupDetailPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/posts/:postId" element={
+        <ProtectedRoute>
+          <PostDetailPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/create-post" element={
+        <ProtectedRoute>
+          <CreatePostPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/moderator" element={
+        <ProtectedRoute>
+          <ModeratorDashboard />
+        </ProtectedRoute>
+      } />
+    </Routes>
+  );
+};
 
 const App = () => {
   return (
-    <AuthProvider>
-      <ThemeProvider>
+    <ThemeProvider>
+      <AuthProvider>
         <Router>
-          <div className="min-h-screen bg-gray-100">
-            <Toaster position="top-right" />
+          <div className="min-h-screen flex flex-col">
             <Navbar />
-            <main className="container mx-auto px-4 py-8">
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <HomePage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/post/:postId"
-                  element={
-                    <div className="flex flex-grow w-full">
-                      <Sidebar />
-                      <PostDetailPage />
-                    </div>
-                  }
-                />
-                <Route
-                  path="/create-post"
-                  element={
-                    <ProtectedRoute>
-                      <div className="flex flex-grow w-full">
-                        <Sidebar />
-                        <CreatePostPage />
-                      </div>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/groups"
-                  element={
-                    <ProtectedRoute>
-                      <GroupPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/groups/:id"
-                  element={
-                    <ProtectedRoute>
-                      <GroupDetailPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/moderation"
-                  element={
-                    <ProtectedRoute>
-                      <ModeratorDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
+            <main className="flex-grow container mx-auto px-4 py-8">
+              <AppRoutes />
             </main>
             <Footer />
+            <ToastContainer />
           </div>
         </Router>
-      </ThemeProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

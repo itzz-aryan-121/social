@@ -11,6 +11,7 @@ import { authenticateToken } from "./middleware/auth.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path";
+import userRoutes from "./routes/users.js";
 
 // Add these lines near your other imports
 const __filename = fileURLToPath(import.meta.url);
@@ -27,10 +28,7 @@ app.use(cors({
 }));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URI)
 .then(() => {
   console.log('Connected to MongoDB successfully');
 })
@@ -60,6 +58,7 @@ app.use("/api/posts", authenticateToken, postRoutes);
 app.use("/api/comments", authenticateToken, commentRoutes);
 app.use("/api/groups", authenticateToken, groupRoutes);
 app.use("/api/moderation", authenticateToken, moderationRoutes);
+app.use("/api/users", authenticateToken, userRoutes);
 
 //Server Static Production
 

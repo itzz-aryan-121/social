@@ -2,27 +2,21 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "react-toastify";
+import { groupsApi } from "../services/api";
 
 const GroupPage = () => {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        // Replace with your actual API endpoint
-        const response = await fetch("/api/groups");
-        const data = await response.json();
-
-        if (response.ok) {
-          setGroups(data);
-        } else {
-          toast.error(data.message || "Failed to fetch groups");
-        }
+        const response = await groupsApi.getAll();
+        setGroups(response.data);
       } catch (error) {
-        toast.error("Error connecting to server");
+        toast.error("Error fetching groups");
         console.error("Error fetching groups:", error);
       } finally {
         setLoading(false);
@@ -37,11 +31,6 @@ const GroupPage = () => {
       group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       group.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleCreateGroup = () => {
-    // This would be expanded in a real implementation
-    toast.info("Group creation will be implemented soon!");
-  };
 
   if (loading) {
     return (
@@ -70,13 +59,13 @@ const GroupPage = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        {currentUser && (
-          <button
-            onClick={handleCreateGroup}
+        {user && (
+          <Link
+            to="/groups/create"
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
           >
             Create New Group
-          </button>
+          </Link>
         )}
       </div>
 
@@ -93,8 +82,8 @@ const GroupPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredGroups.map((group) => (
             <Link
-              to={`/group/${group.id}`}
-              key={group.id}
+              to={`/groups/${group._id}`}
+              key={group._id}
               className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-200"
             >
               <div className="h-40 bg-gray-300 dark:bg-gray-700">

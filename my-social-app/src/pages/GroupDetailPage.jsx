@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
+import { groupsApi } from "../services/api";
 
 const GroupDetailPage = () => {
   const { groupId } = useParams();
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
   const [group, setGroup] = useState(null);
   const [posts, setPosts] = useState([]);
   const [members, setMembers] = useState([]);
@@ -16,39 +17,21 @@ const GroupDetailPage = () => {
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
-        // In a real app, replace with your actual API endpoints
-        const groupResponse = await fetch(`/api/groups/${groupId}`);
-        const groupData = await groupResponse.json();
-
-        if (!groupResponse.ok) {
-          throw new Error(groupData.message || "Failed to fetch group details");
-        }
+        const groupResponse = await groupsApi.getById(groupId);
+        const groupData = groupResponse.data;
 
         setGroup(groupData);
+        setIsMember(groupData.isMember);
 
-        // Check if current user is a member of this group
-        if (currentUser) {
-          setIsMember(
-            groupData.members.some((member) => member.id === currentUser.id)
-          );
-        }
+        // Fetch posts for this group
+        const postsResponse = await groupsApi.getPosts(groupId);
+        setPosts(postsResponse.data.posts || []);
 
-        // Fetch posts and members for this group
-        const postsResponse = await fetch(`/api/groups/${groupId}/posts`);
-        const postsData = await postsResponse.json();
-
-        if (postsResponse.ok) {
-          setPosts(postsData);
-        }
-
-        const membersResponse = await fetch(`/api/groups/${groupId}/members`);
-        const membersData = await membersResponse.json();
-
-        if (membersResponse.ok) {
-          setMembers(membersData);
-        }
+        // Note: Members are not directly accessible from the API for privacy reasons
+        // We'll use the membersCount from the group data
+        setMembers([]);
       } catch (error) {
-        toast.error(error.message || "Error fetching group details");
+        toast.error(error.response?.data?.message || "Error fetching group details");
         console.error("Error:", error);
       } finally {
         setLoading(false);
@@ -56,46 +39,28 @@ const GroupDetailPage = () => {
     };
 
     fetchGroupDetails();
-  }, [groupId, currentUser]);
+  }, [groupId]);
 
   const handleJoinLeave = async () => {
-    if (!currentUser) {
+    if (!user) {
       toast.info("Please login to join groups");
       return;
     }
 
     try {
-      const endpoint = isMember
-        ? `/api/groups/${groupId}/leave`
-        : `/api/groups/${groupId}/join`;
+      const endpoint = isMember ? groupsApi.leave : groupsApi.join;
+      const response = await endpoint(groupId);
+      
+      setIsMember(!isMember);
+      toast.success(
+        isMember ? "Left group successfully" : "Joined group successfully"
+      );
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${currentUser.token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setIsMember(!isMember);
-        toast.success(
-          isMember ? "Left group successfully" : "Joined group successfully"
-        );
-
-        // Update members list
-        if (isMember) {
-          setMembers(members.filter((member) => member.id !== currentUser.id));
-        } else {
-          setMembers([...members, currentUser]);
-        }
-      } else {
-        toast.error(data.message || "Action failed");
-      }
+      // Refresh group details
+      const groupResponse = await groupsApi.getById(groupId);
+      setGroup(groupResponse.data);
     } catch (error) {
-      toast.error("Error connecting to server");
+      toast.error(error.response?.data?.message || "Action failed");
       console.error("Error:", error);
     }
   };
@@ -161,7 +126,7 @@ const GroupDetailPage = () => {
               </div>
             </div>
 
-            {currentUser && (
+            {user && (
               <button
                 onClick={handleJoinLeave}
                 className={`mt-4 md:mt-0 px-6 py-2 rounded-lg transition duration-200 ${
@@ -214,7 +179,7 @@ const GroupDetailPage = () => {
       {/* Tab Content */}
       {activeTab === "posts" && (
         <div>
-          {currentUser && isMember && (
+          {user && isMember && (
             <Link
               to="/create-post"
               state={{ groupId: group.id }}
@@ -230,7 +195,7 @@ const GroupDetailPage = () => {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Be the first to share in this group!
               </p>
-              {currentUser && isMember && (
+              {user && isMember && (
                 <Link
                   to="/create-post"
                   state={{ groupId: group.id }}

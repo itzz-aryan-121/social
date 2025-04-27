@@ -14,6 +14,7 @@ import AuthContext from "../contexts/AuthContext";
 import ThemeContext from "../contexts/ThemeContext";
 import Logo from "./Logo";
 import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -39,6 +40,12 @@ const Navbar = () => {
   const toggleProfile = () => {
     setIsProfileOpen(!isProfileOpen);
     if (isMenuOpen) setIsMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.info('You have been logged out');
+    navigate('/login');
   };
 
   return (
@@ -104,14 +111,23 @@ const Navbar = () => {
                     Moderation
                   </Link>
                 )}
-                <Link
-                  to="/profile"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                >
-                  Profile
-                </Link>
+                {user && user._id ? (
+                  <Link
+                    to={`/profile/${user._id}`}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  >
+                    Profile
+                  </Link>
+                ) : (
+                  <Link
+                    to="/profile"
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  >
+                    Profile
+                  </Link>
+                )}
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="ml-4 px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700"
                 >
                   Logout
@@ -203,18 +219,29 @@ const Navbar = () => {
                     Moderation
                   </Link>
                 )}
-                <Link
-                  to="/profile"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center px-4 py-2 rounded-lg text-white bg-amber-600 hover:bg-amber-700 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 shadow-md transition-all duration-300 ease-in-out"
-                >
-                  <FiUser className="h-5 w-5 mr-3" />
-                  Profile
-                </Link>
+                {user && user._id ? (
+                  <Link
+                    to={`/profile/${user._id}`}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center px-4 py-2 rounded-lg text-white bg-amber-600 hover:bg-amber-700 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 shadow-md transition-all duration-300 ease-in-out"
+                  >
+                    <FiUser className="h-5 w-5 mr-3" />
+                    Profile
+                  </Link>
+                ) : (
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center px-4 py-2 rounded-lg text-white bg-amber-600 hover:bg-amber-700 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 shadow-md transition-all duration-300 ease-in-out"
+                  >
+                    <FiUser className="h-5 w-5 mr-3" />
+                    Profile
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     setIsMenuOpen(false);
-                    logout();
+                    handleLogout();
                   }}
                   className="flex w-full items-center px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-amber-100 dark:hover:bg-gray-800 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 transition-all duration-200 ease-in-out"
                 >

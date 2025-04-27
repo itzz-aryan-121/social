@@ -3,94 +3,77 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
+import { usersApi } from "../services/api";
 
 const ProfilePage = () => {
-  const { userId } = useParams();
+  const params = useParams();
+  const { user } = useAuth();
+  const isOwnProfile = !params.userId || params.userId === user?._id;
+  const userId = params.userId || user?._id;
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("stories");
-  const { user } = useAuth();
 
   useEffect(() => {
+    if (!user && isOwnProfile) return;
+    if (!userId) return;
     const fetchProfile = async () => {
       try {
-        // In a real app, these would be API calls
-        // const profileResponse = await fetch(`/api/users/${userId}`);
-        // const profileData = await profileResponse.json();
-        // const postsResponse = await fetch(`/api/users/${userId}/posts`);
-        // const postsData = await postsResponse.json();
+        let profileResponse;
+        if (isOwnProfile) {
+          profileResponse = await usersApi.getMyProfile();
+        } else {
+          profileResponse = await usersApi.getProfile(userId);
+        }
+        const profileData = profileResponse.data;
+        setProfile(profileData);
 
-        // Mock data for development
-        setTimeout(() => {
-          const mockProfile = {
-            id: userId,
-            username:
-              userId === "101"
-                ? "storyteller"
-                : userId === "102"
-                ? "nightwriter"
-                : "midnighttalker",
-            bio: "Collector of untold stories and forgotten tales",
-            avatar: `/images/avatars/user${userId.slice(-1)}.jpg`,
-            joinedDate: "2024-10-15T10:30:00.000Z",
-            followers: 128,
-            following: 75,
-            location: "Whispering Woods",
-            website: "https://untoldtales.com",
-          };
-
-          const mockPosts = [
-            {
-              id: "1",
-              title: "The Forgotten Village",
-              content:
-                "Deep in the mountains, there lies a village that time forgot...",
-              createdAt: "2025-04-24T18:25:43.511Z",
-              likes: 42,
-              comments: 12,
-              tags: ["folklore", "mystery"],
-            },
-            {
-              id: "4",
-              title: "Echoes from the Past",
-              content:
-                "The antique store had many secrets, but none as strange as the old gramophone...",
-              createdAt: "2025-04-20T14:12:33.110Z",
-              likes: 27,
-              comments: 5,
-              tags: ["historical", "mystery"],
-            },
-          ];
-
-          setProfile(mockProfile);
-          setPosts(mockPosts);
-          setLoading(false);
-        }, 1000);
+        // Fetch user's posts
+        const postsResponse = await usersApi.getPosts(userId);
+        setPosts(postsResponse.data.posts || []);
       } catch (error) {
         console.error("Error fetching profile data:", error);
-        toast.error("Failed to load profile");
+        toast.error(error.response?.data?.message || "Failed to load profile");
+      } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [userId]);
+  }, [params.userId, user]);
 
-  const isOwnProfile = user && user.id === userId;
-
-  const handleFollow = () => {
+  const handleFollow = async () => {
     if (!user) {
       toast.info("Sign in to follow users");
       return;
     }
 
-    // In a real app, this would be an API call
-    setProfile((prev) => ({
-      ...prev,
-      followers: prev.followers + 1,
-    }));
-    toast.success(`You are now following ${profile.username}`);
+    try {
+      await usersApi.follow(userId);
+      setProfile(prev => ({
+        ...prev,
+        followers: prev.followers + 1,
+        isFollowing: true
+      }));
+      toast.success(`You are now following ${profile.username}`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to follow user");
+    }
+  };
+
+  const handleUnfollow = async () => {
+    try {
+      await usersApi.unfollow(userId);
+      setProfile(prev => ({
+        ...prev,
+        followers: prev.followers - 1,
+        isFollowing: false
+      }));
+      toast.success(`You have unfollowed ${profile.username}`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to unfollow user");
+    }
   };
 
   if (loading) {
@@ -106,6 +89,21 @@ const ProfilePage = () => {
     );
   }
 
+  if (!profile) {
+    return (
+      <div className="flex justify-center items-center h-full w-full p-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+            Profile not found
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            The user you're looking for doesn't exist or has been removed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-grow p-6 max-w-4xl mx-auto w-full">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
@@ -113,10 +111,17 @@ const ProfilePage = () => {
         <div className="p-6 relative">
           <div className="absolute -top-12 left-6">
             <div className="h-24 w-24 rounded-full bg-gray-300 dark:bg-gray-600 border-4 border-white dark:border-gray-800 overflow-hidden">
-              {/* In a real app, this would be an actual image */}
-              <div className="h-full w-full flex items-center justify-center text-2xl text-gray-600 dark:text-gray-400">
-                {profile.username.charAt(0).toUpperCase()}
-              </div>
+              {profile.profilePicture ? (
+                <img
+                  src={profile.profilePicture}
+                  alt={profile.username}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-2xl text-gray-600 dark:text-gray-400">
+                  {profile.username.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
 
@@ -127,16 +132,20 @@ const ProfilePage = () => {
                   {profile.username}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Joined {new Date(profile.joinedDate).toLocaleDateString()}
+                  Joined {new Date(profile.createdAt).toLocaleDateString()}
                 </p>
               </div>
 
               {!isOwnProfile && user && (
                 <button
-                  onClick={handleFollow}
-                  className="mt-4 sm:mt-0 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                  onClick={profile.isFollowing ? handleUnfollow : handleFollow}
+                  className={`mt-4 sm:mt-0 px-4 py-2 rounded-md transition-colors ${
+                    profile.isFollowing
+                      ? "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  }`}
                 >
-                  Follow
+                  {profile.isFollowing ? "Unfollow" : "Follow"}
                 </button>
               )}
 
@@ -151,7 +160,7 @@ const ProfilePage = () => {
             </div>
 
             <p className="mt-4 text-gray-700 dark:text-gray-300">
-              {profile.bio}
+              {profile.bio || "No bio yet"}
             </p>
 
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
@@ -268,11 +277,11 @@ const ProfilePage = () => {
               {posts.length > 0 ? (
                 posts.map((post) => (
                   <div
-                    key={post.id}
+                    key={post._id}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
                   >
                     <div className="p-6">
-                      <Link to={`/post/${post.id}`}>
+                      <Link to={`/posts/${post._id}`}>
                         <h3 className="text-xl font-serif font-semibold text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                           {post.title}
                         </h3>
@@ -284,7 +293,7 @@ const ProfilePage = () => {
                         {post.content}
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {post.tags.map((tag) => (
+                        {post.tags?.map((tag) => (
                           <span
                             key={tag}
                             className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full"
@@ -310,7 +319,7 @@ const ProfilePage = () => {
                                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                               />
                             </svg>
-                            {post.likes}
+                            {post.likes?.length || 0}
                           </div>
                           <div className="flex items-center text-gray-500 dark:text-gray-400">
                             <svg
@@ -327,11 +336,11 @@ const ProfilePage = () => {
                                 d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                               />
                             </svg>
-                            {post.comments}
+                            {post.comments?.length || 0}
                           </div>
                         </div>
                         <Link
-                          to={`/post/${post.id}`}
+                          to={`/posts/${post._id}`}
                           className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
                         >
                           Read full story
