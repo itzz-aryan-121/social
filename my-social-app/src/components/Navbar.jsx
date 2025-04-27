@@ -13,9 +13,10 @@ import {
 import AuthContext from "../contexts/AuthContext";
 import ThemeContext from "../contexts/ThemeContext";
 import Logo from "./Logo";
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated } = useContext(AuthContext);
+  const { user, logout, isAuthenticated } = useAuth();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -84,67 +85,37 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/create-post"
-                  className="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 hover:scale-105 focus:ring-2 focus:ring-amber-500 focus:outline-none font-medium shadow-md transition-all duration-300 ease-in-out"
+                  to="/"
+                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                 >
-                  Share Your Story
+                  Home
+                </Link>
+                <Link
+                  to="/groups"
+                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                >
+                  Groups
+                </Link>
+                {user?.role === 'moderator' && (
+                  <Link
+                    to="/moderation"
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  >
+                    Moderation
+                  </Link>
+                )}
+                <Link
+                  to="/profile"
+                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                >
+                  Profile
                 </Link>
                 <button
-                  onClick={toggleProfile}
-                  className="relative p-2 rounded-full text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-gray-800 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 ease-in-out"
-                  aria-label="Profile menu"
+                  onClick={logout}
+                  className="ml-4 px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700"
                 >
-                  {user?.profilePicture ? (
-                    <img
-                      src={user.profilePicture}
-                      alt="Profile"
-                      className="h-9 w-9 rounded-full object-cover border-2 border-amber-300 dark:border-amber-500 transition-all duration-200"
-                    />
-                  ) : (
-                    <FiUser className="h-6 w-6" />
-                  )}
+                  Logout
                 </button>
-
-                {isProfileOpen && (
-                  <div className="absolute right-4 top-16 mt-2 w-56 rounded-xl shadow-xl bg-white dark:bg-gray-800 ring-1 ring-amber-200 dark:ring-gray-700 overflow-hidden opacity-0 translate-y-2 animate-slide-in">
-                    <div className="py-2">
-                      <div className="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 border-b border-amber-100 dark:border-gray-700">
-                        <p className="font-semibold text-amber-800 dark:text-amber-300">
-                          {user?.username}
-                        </p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {user?.email}
-                        </p>
-                      </div>
-                      <Link
-                        to={`/profile/${user?._id}`}
-                        className="block px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-amber-100 dark:hover:bg-gray-800 transition-colors duration-200"
-                        onClick={() => setIsProfileOpen(false)}
-                      >
-                        Your Profile
-                      </Link>
-                      {(user?.role === "admin" ||
-                        user?.role === "moderator") && (
-                        <Link
-                          to="/moderation"
-                          className="block px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-amber-100 dark:hover:bg-gray-800 transition-colors duration-200"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          Moderation Dashboard
-                        </Link>
-                      )}
-                      <button
-                        onClick={() => {
-                          setIsProfileOpen(false);
-                          logout();
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-amber-100 dark:hover:bg-gray-800 transition-colors duration-200"
-                      >
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
               <div className="flex items-center space-x-3">
@@ -210,29 +181,36 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/create-post"
+                  to="/"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center px-4 py-2 rounded-lg text-white bg-amber-600 hover:bg-amber-700 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 shadow-md transition-all duration-300 ease-in-out"
                 >
-                  Share Your Story
+                  Home
                 </Link>
                 <Link
-                  to={`/profile/${user?._id}`}
+                  to="/groups"
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center px-4 py-2 rounded-lg text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-gray-800 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 transition-all duration-200 ease-in-out"
+                  className="flex items-center px-4 py-2 rounded-lg text-white bg-amber-600 hover:bg-amber-700 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 shadow-md transition-all duration-300 ease-in-out"
+                >
+                  Groups
+                </Link>
+                {user?.role === 'moderator' && (
+                  <Link
+                    to="/moderation"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center px-4 py-2 rounded-lg text-white bg-amber-600 hover:bg-amber-700 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 shadow-md transition-all duration-300 ease-in-out"
+                  >
+                    Moderation
+                  </Link>
+                )}
+                <Link
+                  to="/profile"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center px-4 py-2 rounded-lg text-white bg-amber-600 hover:bg-amber-700 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 shadow-md transition-all duration-300 ease-in-out"
                 >
                   <FiUser className="h-5 w-5 mr-3" />
                   Profile
                 </Link>
-                {(user?.role === "admin" || user?.role === "moderator") && (
-                  <Link
-                    to="/moderation"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center px-4 py-2 rounded-lg text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-gray-800 hover:scale-[1.02] focus:ring-2 focus:ring-amber-500 transition-all duration-200 ease-in-out"
-                  >
-                    Moderation Dashboard
-                  </Link>
-                )}
                 <button
                   onClick={() => {
                     setIsMenuOpen(false);

@@ -21,14 +21,37 @@ const app = express();
 const PORT = process.env.PORT || 7001;
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true,
+}));
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(console.log("Connected to MongoDB"))
-  .catch((err) => {
-    console.log("MongoDB connection failed", err);
-  });
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('Connected to MongoDB successfully');
+})
+.catch((err) => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1); // Exit if unable to connect to database
+});
+
+// Handle MongoDB connection events
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  process.exit(0);
+});
 
 //Routing Part
 
@@ -48,6 +71,12 @@ app.use("/api/moderation", authenticateToken, moderationRoutes);
 // }
 app.get("/", (req, res) => {
   res.send("API is running..."); // Simple message to check if the server is running
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
 });
 
 app.listen(PORT, () => {

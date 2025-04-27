@@ -8,6 +8,8 @@ import {
 } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Toaster } from 'react-hot-toast';
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -27,43 +29,33 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Sidebar from "./components/Sidebar";
 
 // Contexts
-import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
-function App() {
+const App = () => {
   return (
-    <Router>
+    <AuthProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
-            <ToastContainer
-              position="top-right"
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop={true}
-            />
+        <Router>
+          <div className="min-h-screen bg-gray-100">
+            <Toaster position="top-right" />
             <Navbar />
-            <div className="flex flex-grow w-full">
+            <main className="container mx-auto px-4 py-8">
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route
                   path="/"
                   element={
-                    <div className="flex flex-grow w-full">
-                      <Sidebar />
+                    <ProtectedRoute>
                       <HomePage />
-                    </div>
+                    </ProtectedRoute>
                   }
                 />
                 <Route
-                  path="/profile/:userId"
+                  path="/profile"
                   element={
                     <ProtectedRoute>
-                      <div className="flex flex-grow w-full">
-                        <Sidebar />
-                        <ProfilePage />
-                      </div>
+                      <ProfilePage />
                     </ProtectedRoute>
                   }
                 />
@@ -90,40 +82,35 @@ function App() {
                 <Route
                   path="/groups"
                   element={
-                    <div className="flex flex-grow w-full">
-                      <Sidebar />
+                    <ProtectedRoute>
                       <GroupPage />
-                    </div>
+                    </ProtectedRoute>
                   }
                 />
                 <Route
-                  path="/group/:groupId"
+                  path="/groups/:id"
                   element={
-                    <div className="flex flex-grow w-full">
-                      <Sidebar />
+                    <ProtectedRoute>
                       <GroupDetailPage />
-                    </div>
+                    </ProtectedRoute>
                   }
                 />
                 <Route
                   path="/moderation"
                   element={
-                    <ProtectedRoute allowedRoles={["moderator", "admin"]}>
-                      <div className="flex flex-grow w-full">
-                        <Sidebar />
-                        <ModeratorDashboard />
-                      </div>
+                    <ProtectedRoute>
+                      <ModeratorDashboard />
                     </ProtectedRoute>
                   }
                 />
               </Routes>
-            </div>
+            </main>
             <Footer />
           </div>
-        </AuthProvider>
+        </Router>
       </ThemeProvider>
-    </Router>
+    </AuthProvider>
   );
-}
+};
 
 export default App;

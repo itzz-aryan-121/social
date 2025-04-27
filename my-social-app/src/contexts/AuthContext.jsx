@@ -1,95 +1,57 @@
 // AuthContext.js
-import React, { createContext, useState, useEffect } from "react";
-import axios from "axios";
+import React, { createContext, useState, useContext, useEffect } from "react";
+import { auth } from '../services/api';
 import { toast } from "react-toastify";
-import { useContext } from "react";
-import.meta.env.VITE_API_URL;
 
-export const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem("token"));
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (token) {
-        try {
-          const config = {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          };
-          const response = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/auth/me`,
-            config
-          );
-          setUser(response.data);
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          // If token is expired or invalid, logout
-          if (
-            error.response &&
-            (error.response.status === 401 || error.response.status === 403)
-          ) {
-            logout();
-          }
-        }
-      }
-      setLoading(false);
-    };
+    // Check for stored user data on mount
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
+  }, []);
 
-    fetchUser();
-  }, [token]);
-
-  const register = async (formData) => {
+  const login = async (credentials) => {
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/auth/register`,
-        formData
-      );
-
-      localStorage.setItem("token", response.data.token);
-      setToken(response.data.token);
-      setUser(response.data.user);
-
-      toast.success("Registration successful! Welcome to Unheard Stories.");
-      return true;
+      const response = await auth.login(credentials);
+      const { token, user: userData } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      toast.success("Welcome back to Unheard Stories!");
+      return { success: true };
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        "Registration failed. Please try again.";
+      const message = error.response?.data?.message || 'Login failed';
       toast.error(message);
-      return false;
+      return { success: false, error: message };
     }
   };
 
-  const login = async (formData) => {
+  const register = async (userData) => {
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/auth/login`,
-        formData
-      );
-
-      localStorage.setItem("token", response.data.token);
-      setToken(response.data.token);
-      setUser(response.data.user);
-
-      toast.success("Welcome back to Unheard Stories!");
-      return true;
+      const response = await auth.register(userData);
+      const { token, user: newUser } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(newUser));
+      setUser(newUser);
+      toast.success("Registration successful! Welcome to Unheard Stories.");
+      return { success: true };
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        "Login failed. Please check your credentials.";
+      const message = error.response?.data?.message || 'Registration failed';
       toast.error(message);
-      return false;
+      return { success: false, error: message };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    setToken(null);
+    auth.logout();
     setUser(null);
     toast.info("You have been logged out");
   };
@@ -98,15 +60,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const config = {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       };
 
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/auth/profile`,
-        formData,
-        config
-      );
+      const response = await auth.updateProfile(formData, config);
 
       setUser(response.data);
       toast.success("Profile updated successfully");
@@ -123,15 +81,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const config = {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       };
 
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/auth/change-password`,
-        formData,
-        config
-      );
+      await auth.changePassword(formData, config);
 
       toast.success("Password changed successfully");
       return true;
@@ -145,20 +99,28 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    loading,
-    token,
-    register,
     login,
+    register,
     logout,
+    isAuthenticated: !!user,
+    loading,
     updateProfile,
     changePassword,
-    isAuthenticated: !!user,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
+
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
 export default AuthContext;

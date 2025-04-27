@@ -15,9 +15,13 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      toast.success("Welcome back to RealEcho");
-      navigate("/");
+      const result = await login({ email, password });
+      if (result.success) {
+        toast.success("Welcome back to RealEcho");
+        navigate("/");
+      } else {
+        toast.error(result.error || "Failed to login. Please try again.");
+      }
     } catch (error) {
       toast.error(error.message || "Failed to login. Please try again.");
     } finally {

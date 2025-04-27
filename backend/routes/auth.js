@@ -14,7 +14,27 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password, isFirstAdmin } = req.body;
+        const { username, email, password } = req.body;
+
+        // Validate input
+        if (!username || !email || !password) {
+            return res.status(400).json({ 
+                message: 'Please provide all required fields: username, email, and password' 
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Please provide a valid email address' });
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                message: 'Password must be at least 6 characters long' 
+            });
+        }
 
         // Check if email already exists
         const emailExists = await User.findOne({ email });
@@ -28,23 +48,12 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Username already exists' });
         }
 
-        // Check if this is the first user and should be admin
-        let role = 'user';
-        if (isFirstAdmin) {
-            const existingUsers = await User.countDocuments();
-            if (existingUsers === 0) {
-                role = 'admin';
-            } else {
-                return res.status(403).json({ message: 'Only the first user can be an admin' });
-            }
-        }
-
         // Create new user
         const user = new User({
             username,
             email,
             password,
-            role
+            role: 'user'
         });
 
         const savedUser = await user.save();
@@ -64,7 +73,11 @@ router.post('/register', async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Registration error:', error);
+        res.status(500).json({ 
+            message: 'Registration failed. Please try again.',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 

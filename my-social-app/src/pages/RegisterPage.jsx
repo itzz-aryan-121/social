@@ -30,9 +30,18 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      await register(formData.username, formData.email, formData.password);
-      toast.success("Welcome to RealEcho! Your voice matters.");
-      navigate("/");
+      const result = await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      });
+      
+      if (result.success) {
+        toast.success("Welcome to RealEcho! Your voice matters.");
+        navigate("/");
+      } else {
+        toast.error(result.error || "Registration failed. Please try again.");
+      }
     } catch (error) {
       toast.error(error.message || "Registration failed. Please try again.");
     } finally {
